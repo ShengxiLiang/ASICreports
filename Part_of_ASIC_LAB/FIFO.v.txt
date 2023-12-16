@@ -1,0 +1,170 @@
+
+`include "EECS151.v"
+
+module fifo #(
+    parameter WIDTH = 8,
+    parameter LOGDEPTH = 3
+) (
+    input clk,
+    input reset,
+    input enq_val,
+    input [WIDTH-1:0] enq_data,
+    output enq_rdy,
+    output deq_val,
+    output [WIDTH-1:0] deq_data,
+    input deq_rdy
+);
+
+    localparam DEPTH = (1 << LOGDEPTH);
+
+    // The buffer itself. Take note of the 2D syntax.
+    wire [WIDTH-1:0] buffer [DEPTH-1:0];
+
+    // Read and write pointers.
+    wire [LOGDEPTH-1:0] rptr;
+    wire [LOGDEPTH-1:0] wptr;
+
+    // Is the buffer full? This is needed for when rptr == wptr.
+    wire full;
+
+    // Define any additional regs or wires you need (if any) here.
+    wire [LOGDEPTH-1:0] wptr_next;
+    wire [LOGDEPTH-1:0] rptr_next;
+
+    // Use "fire" to indicate when a valid transaction has been made.
+    wire enq_fire;
+    wire deq_fire;
+
+    assign enq_fire = enq_val & enq_rdy;
+    assign deq_fire = deq_val & deq_rdy;
+
+    assign wptr_next = wptr + enq_fire;
+    assign rptr_next = rptr + deq_fire;
+
+    REGISTER_R #(.N(LOGDEPTH)) wptr_reg (
+        .clk(clk),
+        .d(wptr_next),
+        .q(wptr),
+        .rst(reset)
+    );
+
+    REGISTER_R #(.N(LOGDEPTH)) rptr_reg (
+        .clk(clk),
+        .d(rptr_next),
+        .q(rptr),
+        .rst(reset)
+    );
+
+    REGISTER_R full_reg (
+        .clk(clk),
+        .d((wptr_next == rptr_next) & (full | enq_fire)),
+        .q(full),
+        .rst(reset)
+    );
+
+    // Instantiate buffer registers.
+    generate
+        for (i = 0; i < DEPTH; i = i + 1) begin : buffer_step
+            REGISTER_R_CE #(.N(WIDTH)) buffer_reg (
+                .clk(clk),
+                .d(enq_data),
+                .q(buffer[i]),
+                .rst(reset),
+                .ce((wptr == i && enq_fire))
+            );
+        end
+    endgenerate
+
+    assign enq_rdy = ~full;
+    assign deq_val = (wptr != rptr) | full;
+    assign deq_data = buffer[rptr];
+
+endmodule
+
+module gcd_coprocessor #(
+    parameter W = 32
+) (
+    input clk,
+    input reset,
+    input operands_val,
+    input [W-1:0] operands_bits_A,
+    input [W-1:0] operands_bits_B,
+    output operands_rdy,
+    output result_val,
+    output [W-1:0] result_bits,
+    input result_rdy
+);
+
+    // Define wires.
+    wire [W-1:0] op_bits_A_req_queue;
+    wire [W-1:0] op_bits_B_req_queue;
+    wire operands_val_req_queue;
+    wire operands_rdy_req_queue;
+    wire [W-1:0] result_bits_data_resp_queue;
+    wire result_rdy_resp_queue;
+    wire result_val_resp_queue;
+    wire [1:0] A_mux_sel;
+    wire A_en, B_en, A_lt_B, B_zero, B_mux_sel;
+
+    // Instantiate gcd_datapath.
+    gcd_datapath #(W) GCD_DP (
+        // External interfaces.
+        .operands_bits_A(operands_bits_A),
+        .operands_bits_B(operands_bits_B),
+        .result_bits_data(result_bits_data),
+        // System signals.
+        .clk(clk),
+        .reset(reset),
+        // Internal control signals.
+        .A_mux_sel(A_mux_sel[1:0]),
+        .A_en(A_en),
+        .B_en(B_en),
+        .B_mux_sel(B_mux_sel),
+        .B_zero(B_zero),
+        .A_lt_B(A_lt_B)
+    );
+
+    // Instantiate gcd_control.
+    gcd_control GCD_CONTROL (
+        // External interfaces.
+        .operands_rdy(operands_rdy),
+        .operands_val(operands_val),
+        .result_rdy(result_rdy),
+        .result_val(result_val),
+        // System signals.
+        .clk(clk),
+        .reset(reset),
+        // Internal control signals.
+        .B_zero(B_zero),
+        .A_lt_B(A_lt_B),
+        .A_mux_sel(A_mux_sel[1:0]),
+        .A_en(A_en),
+        .B_en(B_en),
+        .B_mux_sel(B_mux_sel)
+    );
+
+    // Instantiate request FIFO.
+    fifo #(.WIDTH(2*W), .LOGDEPTH(2)) REQ_FIFO (
+        .clk(clk),
+        .reset(reset),
+        .enq_val(operands_val),
+        .enq_data({operands_bits_A, operands_bits_B}),
+        .enq_rdy(operands_rdy),
+        .deq_val(operands_val_req_queue),
+        .deq_data({op_bits_A_req_queue, op_bits_B_req_queue}),
+        .deq_rdy(operands_rdy_req_queue)
+    );
+
+    // Instantiate response FIFO.
+    fifo #(.WIDTH(W), .LOGDEPTH(2)) RESP_FIFO (
+        .clk(clk),
+        .reset(reset),
+        .enq_val(result_val_resp_queue),
+        .enq_data(result_bits_data_resp_queue),
+        .enq_rdy(result_rdy_resp_queue),
+        .deq_val(result_val),
+        .deq_data(result_bits),
+        .deq_rdy(result_rdy)
+    );
+
+endmodule

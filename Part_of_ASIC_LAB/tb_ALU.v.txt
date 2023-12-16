@@ -1,0 +1,189 @@
+`timescale 1ns / 100ps
+
+module tb_ALU();
+    reg [3:0] ALUop;
+    reg [31:0] A, B, result;
+    wire [31:0] Out;
+    wire carryout, overflow, zero;
+    integer i;
+    reg clk = 0;
+
+    // Clock generation
+    always #20 clk = ~clk;
+
+    // Instantiate the ALU module
+    ALU alu(
+        .ALUop(ALUop),
+        .A(A),
+        .B(B),
+        .carryout(carryout),
+        .overflow(overflow),
+        .zero(zero),
+        .Out(Out)
+    );
+
+    // Initial block to run tests
+    initial begin
+        for (i = 0; i <= 100; i = i + 1) begin
+            // Testing each operation in a loop
+
+            // Test 'add' operation
+            @(negedge clk) begin
+                ALUop = 4'd0; // Set operation to 'add'
+                A = $random();
+                B = $random();
+                result = A + B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass add", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail add", i, A, B, Out, result);
+            end
+
+            // Test 'sub' operation
+            @(negedge clk) begin
+                ALUop = 4'd1; // Set operation to 'sub'
+                A = $random();
+                B = $random();
+                result = A - B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass sub", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail sub", i, A, B, Out, result);
+            end
+
+            // Test 'and' operation
+            @(negedge clk) begin
+                ALUop = 4'd2; // Set operation to 'and'
+                A = $random();
+                B = $random();
+                result = A & B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass and", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail and", i, A, B, Out, result);
+            end
+
+            // Test 'or' operation
+            @(negedge clk) begin
+                ALUop = 4'd3; // Set operation to 'or'
+                A = $random();
+                B = $random();
+                result = A | B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass or", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail or", i, A, B, Out, result);
+            end
+
+            // Test 'xor' operation
+            @(negedge clk) begin
+                ALUop = 4'd4; // Set operation to 'xor'
+                A = $random();
+                B = $random();
+                result = A ^ B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass xor", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail xor", i, A, B, Out, result);
+            end
+
+            // Test 'slt' operation
+            @(negedge clk) begin
+                ALUop = 4'd5; // Set operation to 'slt'
+                A = $random();
+                B = $random();
+                result = ($signed(A) < $signed(B)) ? 32'd1 : 32'd0;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass slt", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail slt", i, A, B, Out, result);
+            end
+
+            // Test 'sltu' operation
+            @(negedge clk) begin
+                ALUop = 4'd6; // Set operation to 'sltu'
+                A = $random();
+                B = $random();
+                result = (A < B) ? 32'd1 : 32'd0;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass sltu", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail sltu", i, A, B, Out, result);
+            end
+
+            // Test 'sll' operation
+            @(negedge clk) begin
+                ALUop = 4'd7; // Set operation to 'sll'
+                A = $random();
+                B = $random() % 32; // Shift amount should be in the range [0, 31]
+                result = A << B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass sll", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail sll", i, A, B, Out, result);
+            end
+
+            // Test 'sra' operation
+            @(negedge clk) begin
+                ALUop = 4'd8; // Set operation to 'sra'
+                A = $random();
+                B = $random() % 32; // Shift amount should be in the range [0, 31]
+                result = $signed(A) >>> B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass sra", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail sra", i, A, B, Out, result);
+            end
+
+            // Test 'srl' operation
+            @(negedge clk) begin
+                ALUop = 4'd9; // Set operation to 'srl'
+                A = $random();
+                B = $random() % 32; // Shift amount should be in the range [0, 31]
+                result = A >> B;
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass srl", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail srl", i, A, B, Out, result);
+            end
+
+            // Test 'copy_b' operation (Example custom operation)
+            @(negedge clk) begin
+                ALUop = 4'd10; // Set operation to 'copy_b'
+                A = $random();
+                B = $random();
+                result = B; // The result should be B
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass copy_b", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail copy_b", i, A, B, Out, result);
+            end
+
+            // Test 'xxx' (undefined or default operation)
+            @(negedge clk) begin
+                ALUop = 4'd15; // Set operation to 'xxx'
+                A = $random();
+                B = $random();
+                result = 0; // Expected result for the 'xxx' operation
+                #1; // Wait for operation to complete
+                if (result == Out)
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, pass xxx", i, A, B, Out, result);
+                else
+                    $display("round%d : A=%d, B=%d, Out=%d, result=%d, fail xxx", i, A, B, Out, result);
+            end
+
+        // Optionally, finish the simulation
+        // $finish;
+    end
+endmodule
