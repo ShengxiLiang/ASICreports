@@ -20,6 +20,17 @@ To offer a glimpse into the technical depth of our project, we have included cod
 
 If you are interested in obtaining a more comprehensive understanding of the project, including its complete code, I encourage you to contact me directly. I am available to share these details in a private manner, ensuring that we adhere to the confidentiality terms set forth by our academic program. This approach allows us to engage in meaningful, collaborative discussions or educational exchanges that are enriched by the full context of the project, while still respecting the course's privacy constraints.
 
+## About the Repository
+
+These reports reflect my journey and learning in various field of Analog ICs.
+
+## Usage
+
+This repository has been created primarily to assist with my graduate study applications. It serves as a convenient reference for schools to review parts of my academic work.
+
+If you have any questions, need access to the complete project files and reports, or require further information, please feel free to [contact me](mailto:lllsx2002@gmail.com). I am open to providing additional materials or discussing the contents of my work in more detail.
+
+---
 ---
 
 For any queries or detailed discussions, feel free to [contact me](mailto:lllsx2002@gmail.com).
